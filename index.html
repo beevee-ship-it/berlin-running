@@ -1,0 +1,1229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Territory Runner</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 15px 20px;
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .stats {
+            display: flex;
+            gap: 20px;
+            font-size: 14px;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-weight: bold;
+            font-size: 18px;
+            color: #667eea;
+        }
+
+        .main-container {
+            display: flex;
+            height: calc(100vh - 80px);
+        }
+
+        .sidebar {
+            width: 300px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .map-container {
+            flex: 1;
+            position: relative;
+            background: #f0f0f0;
+        }
+
+        .mock-map {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, #e8f5e8 25%, transparent 25%), 
+                        linear-gradient(-45deg, #e8f5e8 25%, transparent 25%), 
+                        linear-gradient(45deg, transparent 75%, #e8f5e8 75%), 
+                        linear-gradient(-45deg, transparent 75%, #e8f5e8 75%);
+            background-size: 50px 50px;
+            background-position: 0 0, 0 25px, 25px -25px, -25px 0px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .territory {
+            position: absolute;
+            border-radius: 8px;
+            opacity: 0.7;
+            border: 2px solid;
+            transition: all 0.3s ease;
+        }
+
+        .territory:hover {
+            opacity: 0.9;
+            transform: scale(1.02);
+        }
+
+        .player-territory {
+            background: rgba(102, 126, 234, 0.3);
+            border-color: #667eea;
+        }
+
+        .other-territory {
+            background: rgba(220, 20, 60, 0.3);
+            border-color: #dc143c;
+        }
+
+        .neutral-territory {
+            background: rgba(128, 128, 128, 0.2);
+            border-color: #808080;
+            border-style: dashed;
+        }
+
+        .current-path {
+            position: absolute;
+            background: rgba(118, 75, 162, 0.8);
+            border: 3px solid #764ba2;
+            border-radius: 4px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.8; }
+            50% { opacity: 1; }
+            100% { opacity: 0.8; }
+        }
+
+        .controls {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            margin: 5px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn.danger {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3);
+        }
+
+        .btn.success {
+            background: linear-gradient(45deg, #00d2d3, #54a0ff);
+            box-shadow: 0 4px 15px rgba(0, 210, 211, 0.3);
+        }
+
+        .status {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-running {
+            background: #00d2d3;
+            animation: pulse 1s infinite;
+        }
+
+        .status-idle {
+            background: #666;
+        }
+
+        .leaderboard {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .leaderboard h3 {
+            margin-bottom: 15px;
+            color: #333;
+            text-align: center;
+        }
+
+        .player-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            margin: 5px 0;
+            background: rgba(102, 126, 234, 0.1);
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .player-item:hover {
+            background: rgba(102, 126, 234, 0.2);
+            transform: translateX(5px);
+        }
+
+        .player-name {
+            font-weight: 600;
+        }
+
+        .territory-count {
+            background: #667eea;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .run-info {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .run-metric {
+            display: flex;
+            justify-content: space-between;
+            margin: 8px 0;
+            padding: 5px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .run-metric:last-child {
+            border-bottom: none;
+        }
+
+        .metric-label {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .metric-value {
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .location-info {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            font-size: 14px;
+        }
+
+        .gps-icon {
+            color: #667eea;
+            margin-right: 5px;
+        }
+
+        @media (max-width: 768px) {
+            .main-container {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+                height: auto;
+                max-height: 40vh;
+            }
+            
+            .stats {
+                gap: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo">🏃‍♂️ Territory Runner</div>
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-value" id="totalTerritories">3</div>
+                <div>Territories</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="totalDistance">12.5</div>
+                <div>km Total</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="currentRank">#4</div>
+                <div>Rank</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <div class="sidebar">
+            <div class="controls">
+                <h3>Run Control</h3>
+                <button class="btn" id="startRunBtn" onclick="toggleRun()">Start Run</button>
+                <button class="btn success" id="completeLoopBtn" onclick="completeLoop()" style="display: none;">Complete Loop</button>
+                <button class="btn danger" id="stopRunBtn" onclick="stopRun()" style="display: none;">Stop Run</button>
+            </div>
+
+            <div class="status">
+                <h3>Status</h3>
+                <div>
+                    <span class="status-indicator status-idle" id="statusIndicator"></span>
+                    <span id="statusText">Ready to run</span>
+                </div>
+            </div>
+
+            <div class="run-info" id="runInfo" style="display: none;">
+                <h3>Current Run</h3>
+                <div class="run-metric">
+                    <span class="metric-label">Duration:</span>
+                    <span class="metric-value" id="runDuration">0:00</span>
+                </div>
+                <div class="run-metric">
+                    <span class="metric-label">Distance:</span>
+                    <span class="metric-value" id="runDistance">0.0 km</span>
+                </div>
+                <div class="run-metric">
+                    <span class="metric-label">Pace:</span>
+                    <span class="metric-value" id="runPace">0:00 /km</span>
+                </div>
+                <div class="run-metric">
+                    <span class="metric-label">Territory Size:</span>
+                    <span class="metric-value" id="territorySize">0.0 km²</span>
+                </div>
+            </div>
+
+            <div class="leaderboard">
+                <h3>🏆 Leaderboard</h3>
+                <div class="player-item">
+                    <span class="player-name">Alex_Runner</span>
+                    <span class="territory-count">12</span>
+                </div>
+                <div class="player-item">
+                    <span class="player-name">SpeedDemon</span>
+                    <span class="territory-count">8</span>
+                </div>
+                <div class="player-item">
+                    <span class="player-name">MarathonMike</span>
+                    <span class="territory-count">7</span>
+                </div>
+                <div class="player-item" style="background: rgba(102, 126, 234, 0.3);">
+                    <span class="player-name">You</span>
+                    <span class="territory-count">3</span>
+                </div>
+                <div class="player-item">
+                    <span class="player-name">RunnerGirl</span>
+                    <span class="territory-count">2</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="map-container">
+            <div class="mock-map" id="mapArea">
+                <!-- Existing territories -->
+                <div class="territory player-territory" style="top: 20%; left: 15%; width: 150px; height: 120px;"></div>
+                <div class="territory player-territory" style="top: 60%; left: 10%; width: 100px; height: 100px;"></div>
+                <div class="territory player-territory" style="top: 70%; left: 70%; width: 120px; height: 80px;"></div>
+                
+                <div class="territory other-territory" style="top: 10%; left: 60%; width: 180px; height: 140px;"></div>
+                <div class="territory other-territory" style="top: 40%; left: 75%; width: 160px; height: 100px;"></div>
+                <div class="territory other-territory" style="top: 30%; left: 40%; width: 140px; height: 90px;"></div>
+                
+                <div class="territory neutral-territory" style="top: 80%; left: 30%; width: 200px; height: 80px;"></div>
+                <div class="territory neutral-territory" style="top: 45%; left: 5%; width: 80px; height: 120px;"></div>
+            </div>
+            
+            <div class="location-info">
+                <div><span class="gps-icon">📍</span> Berlin, Germany</div>
+                <div style="margin-top: 5px; color: #666;">GPS: Active</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Privacy Settings Modal -->
+    <div id="privacyModal" class="modal">
+        <div class="modal-content">
+            <h3>🔒 Privacy & Data Settings</h3>
+            
+            <div class="privacy-section">
+                <h4>Location Data</h4>
+                <div class="toggle-switch">
+                    <span>GPS Tracking</span>
+                    <div class="switch active" onclick="toggleSetting(this)">
+                        <div class="switch-slider"></div>
+                    </div>
+                </div>
+                <div class="toggle-switch">
+                    <span>Location History</span>
+                    <div class="switch active" onclick="toggleSetting(this)">
+                        <div class="switch-slider"></div>
+                    </div>
+                </div>
+                <small>Required for territory claiming. Data encrypted and stored locally.</small>
+            </div>
+
+            <div class="privacy-section">
+                <h4>Data Sharing</h4>
+                <div class="toggle-switch">
+                    <span>Anonymous Analytics</span>
+                    <div class="switch" onclick="toggleSetting(this)">
+                        <div class="switch-slider"></div>
+                    </div>
+                </div>
+                <div class="toggle-switch">
+                    <span>Public Leaderboard</span>
+                    <div class="switch active" onclick="toggleSetting(this)">
+                        <div class="switch-slider"></div>
+                    </div>
+                </div>
+                <small>Help improve the app while protecting your privacy.</small>
+            </div>
+
+            <div class="data-retention">
+                <h4>⏰ Data Retention</h4>
+                <p><strong>Location Data:</strong> Stored for 30 days, then anonymized</p>
+                <p><strong>Territory Claims:</strong> Kept while active, deleted after 90 days of inactivity</p>
+                <p><strong>Sync Data:</strong> Processed in real-time, not permanently stored</p>
+                <button class="btn" onclick="exportData()">📄 Export My Data</button>
+                <button class="btn danger" onclick="deleteAccount()">🗑️ Delete Account</button>
+            </div>
+
+            <div style="text-align: center; margin-top: 20px;">
+                <button class="btn success" onclick="closeModal('privacyModal')">Save Settings</button>
+                <button class="btn" onclick="closeModal('privacyModal')">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sync Options Modal -->
+    <div id="syncModal" class="modal">
+        <div class="modal-content">
+            <h3>🔗 Sync with Fitness Apps</h3>
+            
+            <div class="privacy-section">
+                <h4>Data Import Options</h4>
+                <div class="toggle-switch">
+                    <span>Import Past Routes</span>
+                    <div class="switch" onclick="toggleSetting(this)">
+                        <div class="switch-slider"></div>
+                    </div>
+                </div>
+                <div class="toggle-switch">
+                    <span>Real-time Sync</span>
+                    <div class="switch active" onclick="toggleSetting(this)">
+                        <div class="switch-slider"></div>
+                    </div>
+                </div>
+                <small>Import your running history to claim past routes as territories.</small>
+            </div>
+
+            <div class="privacy-section">
+                <h4>🔒 Privacy Protection</h4>
+                <p>✅ OAuth 2.0 secure authentication</p>
+                <p>✅ Read-only access to activity data</p>
+                <p>✅ No access to personal messages or contacts</p>
+                <p>✅ Data processed locally, not stored on servers</p>
+                <p>✅ Revoke access anytime</p>
+            </div>
+
+            <div style="text-align: center; margin-top: 20px;">
+                <button class="btn success" onclick="closeModal('syncModal')">Continue Setup</button>
+                <button class="btn" onclick="closeModal('syncModal')">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let gdprAccepted = false;
+        let syncedApps = {
+            garmin: false,
+            strava: false,
+            apple: false
+        };
+
+        // Show GDPR banner on load
+        window.addEventListener('load', () => {
+            const gdprBanner = document.getElementById('gdprBanner');
+            setTimeout(() => {
+                gdprBanner.classList.add('show');
+            }, 1000);
+        });
+
+        function acceptGDPR() {
+            gdprAccepted = true;
+            document.getElementById('gdprBanner').classList.remove('show');
+            // Store consent in browser (in real app, this would be more sophisticated)
+            localStorage.setItem('gdprConsent', JSON.stringify({
+                accepted: true,
+                timestamp: new Date().toISOString(),
+                version: '1.0'
+            }));
+        }
+
+        function declineGDPR() {
+            alert('Location tracking is required for territory claiming. You can adjust specific settings in Privacy Settings.');
+            showPrivacySettings();
+        }
+
+        function showPrivacySettings() {
+            document.getElementById('privacyModal').classList.add('show');
+        }
+
+        function showSyncOptions() {
+            document.getElementById('syncModal').classList.add('show');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('show');
+        }
+
+        function toggleSetting(element) {
+            element.classList.toggle('active');
+        }
+
+        function toggleSync(app) {
+            const button = document.getElementById(app + 'Btn');
+            const item = button.parentElement;
+            
+            if (syncedApps[app]) {
+                // Disconnect
+                syncedApps[app] = false;
+                button.textContent = 'Connect';
+                item.classList.remove('connected');
+                button.className = 'btn-small';
+            } else {
+                // Connect - in real app, this would trigger OAuth flow
+                simulateOAuthFlow(app, (success) => {
+                    if (success) {
+                        syncedApps[app] = true;
+                        button.textContent = 'Connected';
+                        item.classList.add('connected');
+                        button.className = 'btn-small success';
+                        
+                        // Simulate importing data
+                        setTimeout(() => {
+                            importDataFromApp(app);
+                        }, 2000);
+                    }
+                });
+            }
+        }
+
+        function simulateOAuthFlow(app, callback) {
+            // Simulate OAuth authentication
+            const authWindow = confirm(`Connect to ${app.charAt(0).toUpperCase() + app.slice(1)}?\n\n✅ Read-only access to activities\n✅ No personal data sharing\n✅ Revokable anytime\n\nContinue to authentication?`);
+            
+            if (authWindow) {
+                // Simulate auth delay
+                setTimeout(() => {
+                    callback(true);
+                    alert(`🎉 Successfully connected to ${app.charAt(0).toUpperCase() + app.slice(1)}!\n\nImporting your recent activities...`);
+                }, 1500);
+            } else {
+                callback(false);
+            }
+        }
+
+        function importDataFromApp(app) {
+            // Simulate data import
+            const importCount = Math.floor(Math.random() * 5) + 3;
+            alert(`📥 Imported ${importCount} activities from ${app.charAt(0).toUpperCase() + app.slice(1)}!\n\n${importCount} new potential territories detected from your running history.`);
+            
+            // Add some new territories to the map
+            for (let i = 0; i < Math.min(importCount, 3); i++) {
+                setTimeout(() => {
+                    addImportedTerritory();
+                }, i * 1000);
+            }
+        }
+
+        function addImportedTerritory() {
+            const mapArea = document.getElementById('mapArea');
+            const newTerritory = document.createElement('div');
+            newTerritory.className = 'territory neutral-territory';
+            newTerritory.title = 'Imported route - click to claim as territory';
+            
+            const left = Math.random() * 70;
+            const top = Math.random() * 70;
+            const width = Math.random() * 80 + 60;
+            const height = Math.random() * 60 + 40;
+            
+            newTerritory.style.left = left + '%';
+            newTerritory.style.top = top + '%';
+            newTerritory.style.width = width + 'px';
+            newTerritory.style.height = height + 'px';
+            newTerritory.style.opacity = '0';
+            newTerritory.style.borderColor = '#00d2d3';
+            
+            // Make it clickable to claim
+            newTerritory.onclick = () => {
+                newTerritory.className = 'territory player-territory';
+                newTerritory.onclick = null;
+                alert('Territory claimed from imported route! 🎉');
+            };
+            
+            mapArea.appendChild(newTerritory);
+            
+            // Animate in
+            setTimeout(() => {
+                newTerritory.style.transition = 'all 0.5s ease';
+                newTerritory.style.opacity = '0.7';
+            }, 100);
+        }
+
+        function exportData() {
+            // Simulate GDPR data export
+            const data = {
+                territories: 3,
+                totalDistance: 12.5,
+                locationData: "Anonymized GPS coordinates and timestamps",
+                syncedApps: Object.keys(syncedApps).filter(app => syncedApps[app]),
+                createdAt: new Date().toISOString()
+            };
+            
+            const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'territory-runner-data.json';
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            alert('📄 Your data has been exported as JSON file!');
+        }
+
+        // PWA and sharing functionality
+        let deferredPrompt;
+        let teamCreated = false;
+
+        // PWA install prompt
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            showPWABanner();
+        });
+
+        function showPWABanner() {
+            setTimeout(() => {
+                document.getElementById('pwaBanner').classList.add('show');
+            }, 3000);
+        }
+
+        function hidePWABanner() {
+            document.getElementById('pwaBanner').classList.remove('show');
+        }
+
+        function installPWA() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        alert('🎉 Territory Runner installed! You can now access it from your home screen.');
+                    }
+                    deferredPrompt = null;
+                    hidePWABanner();
+                });
+            } else {
+                // Fallback instructions
+                alert('📱 To install:\n\niOS: Tap Share → Add to Home Screen\nAndroid: Menu → Add to Home Screen\nDesktop: Address bar → Install icon');
+            }
+        }
+
+        function showShareOptions() {
+            document.getElementById('shareModal').classList.add('show');
+        }
+
+        function createTeam() {
+            teamCreated = true;
+            document.getElementById('teamMembers').style.display = 'block';
+            document.getElementById('teamCode').style.display = 'block';
+            alert('🎉 Team "Berlin Runners" created!\n\nShare code BERLIN2024 with your running buddies to invite them.');
+        }
+
+        function joinTeam() {
+            const code = prompt('Enter team code:');
+            if (code && code.toUpperCase() === 'BERLIN2024') {
+                teamCreated = true;
+                document.getElementById('teamMembers').style.display = 'block';
+                alert('🎉 Joined "Berlin Runners" team!\n\nYou can now see your teammates on the map and compete for territories.');
+            } else if (code) {
+                alert('❌ Invalid team code. Ask your team captain for the correct code.');
+            }
+        }
+
+        function shareTeamCode() {
+            if (navigator.share) {
+                navigator.share({
+                    title: 'Join my Territory Runner team!',
+                    text: 'I\'m competing for running territories in Berlin. Join my team!',
+                    url: window.location.href + '?team=BERLIN2024'
+                });
+            } else {
+                copyToClipboard('Team Code: BERLIN2024\nLink: ' + window.location.href + '?team=BERLIN2024');
+            }
+        }
+
+        function shareWhatsApp() {
+            const message = encodeURIComponent('🏃‍♂️ Join me on Territory Runner! Claim running territories and compete with friends.\n\nTeam Code: BERLIN2024\n' + window.location.href);
+            window.open(`https://wa.me/?text=${message}`, '_blank');
+        }
+
+        function shareEmail() {
+            const subject = encodeURIComponent('Join my Territory Runner team!');
+            const body = encodeURIComponent('Hi!\n\nI\'m using Territory Runner to track my runs and compete for territories around Berlin. Want to join my team?\n\nTeam Code: BERLIN2024\nLink: ' + window.location.href + '\n\nIt\'s like Paper.io but for running - claim territory by completing loops on your runs!\n\nSee you on the map!\n');
+            window.location.href = `mailto:?subject=${subject}&body=${body}`;
+        }
+
+        function copyLink() {
+            copyToClipboard(window.location.href + '?team=BERLIN2024');
+            alert('🔗 Team link copied! Share it with your running buddies.');
+        }
+
+        function showQR() {
+            document.getElementById('qrSection').style.display = 'block';
+        }
+
+        function copyToClipboard(text) {
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(text);
+            } else {
+                // Fallback for older browsers
+                const textarea = document.createElement('textarea');
+                textarea.value = text;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+            }
+        }
+
+        function generateAPK() {
+            alert('📱 Android APK Generation\n\nTo create an Android app:\n1. Use PWABuilder.com\n2. Upload this URL: ' + window.location.href + '\n3. Generate and download APK\n4. Share with your team!\n\nAlternatively, just use "Add to Home Screen" for instant app-like experience.');
+        }
+
+        function shareiOSLink() {
+            if (navigator.share) {
+                navigator.share({
+                    title: 'Territory Runner - iOS',
+                    text: 'Claim running territories with your iPhone!',
+                    url: window.location.href + '?ios=1'
+                });
+            } else {
+                alert('📱 iOS Installation\n\n1. Open this link in Safari\n2. Tap Share button\n3. Select "Add to Home Screen"\n4. Territory Runner will appear as an app!\n\nLink: ' + window.location.href);
+            }
+        }
+
+        function exportAsHTML() {
+            // Create downloadable HTML file
+            const htmlContent = document.documentElement.outerHTML;
+            const blob = new Blob([htmlContent], {type: 'text/html'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'territory-runner.html';
+            a.click();
+            URL.revokeObjectURL(url);
+            alert('📁 Downloaded! Share this HTML file with your team - they can open it in any browser.');
+        }
+
+        // Privacy and location protection
+        let privacyZones = {
+            home: { lat: 52.5200, lng: 13.4050, radius: 150, active: true },
+            work: { lat: 52.5170, lng: 13.3888, radius: 100, active: true }
+        };
+
+        function managePrivacyZones() {
+            document.getElementById('privacyZonesModal').classList.add('show');
+        }
+
+        function addPrivacyZone(type) {
+            let zoneName = type;
+            let radius = 150;
+            
+            if (type === 'custom') {
+                zoneName = prompt('Enter zone name (e.g., "Gym", "School"):');
+                if (!zoneName) return;
+                
+                const radiusInput = prompt('Enter radius in meters (50-500):', '150');
+                radius = parseInt(radiusInput) || 150;
+                radius = Math.max(50, Math.min(500, radius)); // Clamp between 50-500m
+            }
+
+            // In real app, this would use current location or map selection
+            alert(`📍 Privacy zone "${zoneName}" added!\n\nRadius: ${radius}m\n\nThis zone will hide exact start/end points within ${radius} meters while keeping territory calculations accurate.`);
+            
+            // Update privacy status
+            updatePrivacyStatus();
+        }
+
+        function editZone(zoneId) {
+            const zone = privacyZones[zoneId];
+            if (!zone) return;
+            
+            const newRadius = prompt(`Edit radius for ${zoneId} zone (current: ${zone.radius}m):`, zone.radius);
+            if (newRadius && !isNaN(newRadius)) {
+                zone.radius = Math.max(50, Math.min(500, parseInt(newRadius)));
+                alert(`✅ ${zoneId} zone updated to ${zone.radius}m radius`);
+            }
+        }
+
+        function removeZone(zoneId) {
+            const confirmed = confirm(`Remove ${zoneId} privacy zone?\n\nYour start/end points near this location will no longer be hidden.`);
+            if (confirmed) {
+                delete privacyZones[zoneId];
+                alert(`🗑️ ${zoneId} privacy zone removed`);
+                // In real app, would update the UI list
+            }
+        }
+
+        function updatePrivacyStatus() {
+            const activeZones = Object.keys(privacyZones).filter(key => privacyZones[key].active).length;
+            const statusElement = document.getElementById('privacyStatus');
+            if (statusElement) {
+                statusElement.textContent = `🔒 ${activeZones} zones active`;
+            }
+        }
+
+        function maskStartEndPoints(route) {
+            // This function would be called during route processing
+            // It masks the actual start/end points while preserving territory calculation accuracy
+            
+            const maskedRoute = {...route};
+            
+            // Check if start point is within privacy zones
+            for (const [zoneId, zone] of Object.entries(privacyZones)) {
+                if (zone.active) {
+                    const startDistance = calculateDistance(route.start, zone);
+                    const endDistance = calculateDistance(route.end, zone);
+                    
+                    // Mask points within privacy zones
+                    if (startDistance < zone.radius) {
+                        maskedRoute.displayStart = offsetPoint(route.start, zone.radius + 50);
+                        maskedRoute.startMasked = true;
+                    }
+                    
+                    if (endDistance < zone.radius) {
+                        maskedRoute.displayEnd = offsetPoint(route.end, zone.radius + 50);
+                        maskedRoute.endMasked = true;
+                    }
+                }
+            }
+            
+            return maskedRoute;
+        }
+
+        function calculateDistance(point1, point2) {
+            // Simplified distance calculation (in real app, use proper GPS distance)
+            const dx = point1.lat - point2.lat;
+            const dy = point1.lng - point2.lng;
+            return Math.sqrt(dx * dx + dy * dy) * 111000; // Rough meters
+        }
+
+        function offsetPoint(point, offsetMeters) {
+            // Offset a point by specified meters in a random direction
+            const angle = Math.random() * 2 * Math.PI;
+            const offsetDegrees = offsetMeters / 111000; // Rough degree conversion
+            
+            return {
+                lat: point.lat + Math.cos(angle) * offsetDegrees,
+                lng: point.lng + Math.sin(angle) * offsetDegrees
+            };
+        }
+
+        function generatePrivacyReport() {
+            // This would be called when completing a run
+            const report = {
+                totalRoute: "5.2 km",
+                territoryArea: "2.1 km²",
+                privacyProtection: {
+                    startPointMasked: true,
+                    endPointMasked: false,
+                    zonesActive: Object.keys(privacyZones).length,
+                    dataShared: "Territory boundaries only"
+                }
+            };
+            
+            return report;
+        }
+
+        // Initialize privacy status
+        document.addEventListener('DOMContentLoaded', () => {
+            updatePrivacyStatus();
+        });
+            alert('💻 Source Code Options:\n\n1. Save this page as HTML (Ctrl+S)\n2. View source and copy (F12)\n3. Host on GitHub Pages for free\n4. Use Netlify/Vercel for deployment\n\nThe app works entirely in the browser - no server needed!');
+        }
+
+        function deleteAccount() {
+            const confirmed = confirm('⚠️ This will permanently delete:\n\n• All your territories\n• Location history\n• Sync connections\n• Account data\n\nThis cannot be undone. Continue?');
+            
+            if (confirmed) {
+                const finalConfirm = confirm('Are you absolutely sure? Type DELETE in the next dialog to confirm.');
+                if (finalConfirm) {
+                    const deleteText = prompt('Type DELETE to confirm account deletion:');
+                    if (deleteText === 'DELETE') {
+                        alert('🗑️ Account deletion initiated.\n\nYou will receive an email confirmation within 24 hours.\nAll data will be permanently removed within 30 days as per GDPR requirements.');
+                        closeModal('privacyModal');
+                    }
+                }
+            }
+        }
+            const confirmed = confirm('⚠️ This will permanently delete:\n\n• All your territories\n• Location history\n• Sync connections\n• Account data\n\nThis cannot be undone. Continue?');
+            
+            if (confirmed) {
+                const finalConfirm = confirm('Are you absolutely sure? Type DELETE in the next dialog to confirm.');
+                if (finalConfirm) {
+                    const deleteText = prompt('Type DELETE to confirm account deletion:');
+                    if (deleteText === 'DELETE') {
+                        alert('🗑️ Account deletion initiated.\n\nYou will receive an email confirmation within 24 hours.\nAll data will be permanently removed within 30 days as per GDPR requirements.');
+                        closeModal('privacyModal');
+                    }
+                }
+            }
+        }
+        let isRunning = false;
+        let runStartTime = null;
+        let runTimer = null;
+        let currentDistance = 0;
+        let currentPath = null;
+
+        function toggleRun() {
+            if (!isRunning) {
+                startRun();
+            }
+        }
+
+        let currentRoute = [];
+        let startPoint = null;
+        let isLoopClosed = false;
+        let minimumLoopDistance = 500; // meters
+        let loopCloseThreshold = 100; // meters from start to close loop
+
+        function startRun() {
+            isRunning = true;
+            runStartTime = new Date();
+            
+            // Initialize route tracking
+            currentRoute = [];
+            startPoint = { lat: 52.5200, lng: 13.4050 }; // Mock start point
+            isLoopClosed = false;
+            
+            // Update UI
+            document.getElementById('startRunBtn').style.display = 'none';
+            document.getElementById('completeLoopBtn').style.display = 'inline-block';
+            document.getElementById('stopRunBtn').style.display = 'inline-block';
+            document.getElementById('runInfo').style.display = 'block';
+            document.getElementById('loopStatus').style.display = 'block';
+            
+            document.getElementById('statusIndicator').className = 'status-indicator status-running';
+            document.getElementById('statusText').textContent = 'Running - Creating loop...';
+            document.getElementById('loopStatusValue').textContent = '❌ Open path';
+            
+            // Start the run timer
+            runTimer = setInterval(updateRunStats, 1000);
+            
+            // Simulate creating a path on the map
+            createRunningPath();
+            
+            // Start route simulation
+            simulateRouteProgress();
+        }
+
+        function simulateRouteProgress() {
+            if (!isRunning) return;
+            
+            // Simulate GPS points being added to route
+            const mockPoint = {
+                lat: startPoint.lat + (Math.random() - 0.5) * 0.01,
+                lng: startPoint.lng + (Math.random() - 0.5) * 0.01,
+                timestamp: new Date()
+            };
+            
+            currentRoute.push(mockPoint);
+            
+            // Check if we're close to start (closing the loop)
+            const distanceToStart = calculateDistance(mockPoint, startPoint);
+            document.getElementById('distanceToStart').textContent = Math.round(distanceToStart) + 'm';
+            
+            // Check if loop is closed
+            if (distanceToStart < loopCloseThreshold && currentDistance > (minimumLoopDistance / 1000)) {
+                if (!isLoopClosed) {
+                    isLoopClosed = true;
+                    document.getElementById('loopStatusValue').textContent = '✅ Loop closed!';
+                    document.getElementById('loopText').textContent = '🎉 Loop completed! Ready to capture territory';
+                    
+                    // Enable complete loop button with special styling
+                    const completeBtn = document.getElementById('completeLoopBtn');
+                    completeBtn.textContent = '🏆 Capture Territory!';
+                    completeBtn.style.background = 'linear-gradient(45deg, #00d2d3, #54a0ff)';
+                    completeBtn.style.animation = 'pulse 1s infinite';
+                    
+                    // Show success message
+                    showLoopCompletedMessage();
+                }
+            } else if (currentDistance > (minimumLoopDistance / 1000)) {
+                document.getElementById('loopStatusValue').textContent = `🔄 Return to start (${Math.round(distanceToStart)}m away)`;
+            } else {
+                document.getElementById('loopStatusValue').textContent = `❌ Need ${Math.round(minimumLoopDistance - currentDistance * 1000)}m more`;
+            }
+            
+            // Update progress bar
+            const progress = Math.min(100, (currentDistance * 1000 / minimumLoopDistance) * 100);
+            document.getElementById('loopProgress').style.width = progress + '%';
+            
+            // Continue simulation
+            if (isRunning) {
+                setTimeout(simulateRouteProgress, 2000);
+            }
+        }
+
+        function showLoopCompletedMessage() {
+            // Create temporary notification
+            const notification = document.createElement('div');
+            notification.className = 'loop-detected';
+            notification.innerHTML = '🎉 <strong>Loop Detected!</strong><br>You can now capture this territory!';
+            
+            const runInfo = document.getElementById('runInfo');
+            runInfo.appendChild(notification);
+            
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.remove();
+                }
+            }, 5000);
+        }
+
+        function completeLoop() {
+            if (!isRunning) return;
+            
+            if (!isLoopClosed) {
+                alert('❌ Cannot capture territory!\n\nYou need to:\n• Complete a closed loop (return near start)\n• Run at least 500m minimum\n• Current distance to start: ' + document.getElementById('distanceToStart').textContent);
+                return;
+            }
+            
+            // Calculate territory area based on loop
+            const territoryArea = calculateLoopArea(currentRoute);
+            
+            // Convert current path to claimed territory
+            if (currentPath) {
+                currentPath.className = 'territory player-territory';
+                currentPath.style.animation = 'none';
+                currentPath.style.border = '3px solid #00d2d3';
+                currentPath = null;
+            }
+            
+            // Update stats
+            const currentTerritories = parseInt(document.getElementById('totalTerritories').textContent);
+            document.getElementById('totalTerritories').textContent = currentTerritories + 1;
+            
+            const totalDistance = parseFloat(document.getElementById('totalDistance').textContent);
+            document.getElementById('totalDistance').textContent = (totalDistance + currentDistance).toFixed(1);
+            
+            // Show success message with territory details
+            alert(`🎉 Territory Captured!\n\n📏 Loop Distance: ${currentDistance.toFixed(1)} km\n🗺️ Area Claimed: ${territoryArea.toFixed(2)} km²\n⭐ Territory Points: ${Math.round(territoryArea * 100)}\n\nGreat job completing the loop!`);
+            
+            stopRun();
+        }
+
+        function calculateLoopArea(route) {
+            // Simplified area calculation for closed polygon
+            // In real app, would use proper GPS polygon area calculation
+            if (route.length < 3) return 0;
+            
+            // Mock calculation based on route length and average radius
+            const avgDistance = currentDistance; // km
+            const estimatedRadius = avgDistance / (2 * Math.PI); // Assume roughly circular
+            const area = Math.PI * estimatedRadius * estimatedRadius;
+            
+            return Math.max(0.1, area); // Minimum 0.1 km² for any completed loop
+        }
+
+        function stopRun() {
+            isRunning = false;
+            clearInterval(runTimer);
+            
+            // Check if stopping mid-run with open path
+            if (!isLoopClosed && currentDistance > 0) {
+                const shouldSave = confirm('⚠️ Incomplete Loop Detected\n\nYou haven\'t returned to your starting point, so no territory can be captured.\n\nWould you like to save this as a regular run (no territory claimed)?');
+                
+                if (shouldSave) {
+                    alert('📊 Run saved as training data!\n\nDistance: ' + currentDistance.toFixed(1) + ' km\nNo territory claimed (open path)\n\nTip: Complete loops by returning near your start point to capture territory!');
+                }
+            }
+            
+            // Reset UI
+            document.getElementById('startRunBtn').style.display = 'inline-block';
+            document.getElementById('completeLoopBtn').style.display = 'none';
+            document.getElementById('stopRunBtn').style.display = 'none';
+            document.getElementById('runInfo').style.display = 'none';
+            document.getElementById('loopStatus').style.display = 'none';
+            
+            document.getElementById('statusIndicator').className = 'status-indicator status-idle';
+            document.getElementById('statusText').textContent = 'Ready to run';
+            
+            // Reset complete loop button
+            const completeBtn = document.getElementById('completeLoopBtn');
+            completeBtn.textContent = 'Complete Loop';
+            completeBtn.style.background = 'linear-gradient(45deg, #00d2d3, #54a0ff)';
+            completeBtn.style.animation = 'none';
+            
+            // Remove current path
+            if (currentPath) {
+                currentPath.remove();
+                currentPath = null;
+            }
+            
+            resetRunStats();
+        }
+
+        function createRunningPath() {
+            const mapArea = document.getElementById('mapArea');
+            currentPath = document.createElement('div');
+            currentPath.className = 'current-path';
+            
+            // Random position and size for the current run
+            const left = Math.random() * 60 + 20; // 20-80%
+            const top = Math.random() * 60 + 20;  // 20-80%
+            const width = Math.random() * 100 + 80; // 80-180px
+            const height = Math.random() * 80 + 60;  // 60-140px
+            
+            currentPath.style.left = left + '%';
+            currentPath.style.top = top + '%';
+            currentPath.style.width = width + 'px';
+            currentPath.style.height = height + 'px';
+            
+            mapArea.appendChild(currentPath);
+        }
+
+        function updateRunStats() {
+            if (!isRunning) return;
+            
+            const now = new Date();
+            const duration = Math.floor((now - runStartTime) / 1000);
+            const minutes = Math.floor(duration / 60);
+            const seconds = duration % 60;
+            
+            document.getElementById('runDuration').textContent = 
+                `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            
+            // Simulate distance increase
+            currentDistance += (Math.random() * 0.1 + 0.05);
+            document.getElementById('runDistance').textContent = currentDistance.toFixed(1) + ' km';
+            
+            // Calculate pace
+            if (currentDistance > 0) {
+                const paceMinutes = Math.floor((duration / 60) / currentDistance);
+                const paceSeconds = Math.floor(((duration / 60) / currentDistance - paceMinutes) * 60);
+                document.getElementById('runPace').textContent = 
+                    `${paceMinutes}:${paceSeconds.toString().padStart(2, '0')} /km`;
+            }
+            
+            // Simulate territory size
+            const territorySize = currentDistance * (Math.random() * 0.3 + 0.2);
+            document.getElementById('territorySize').textContent = territorySize.toFixed(1) + ' km²';
+        }
+
+        function resetRunStats() {
+            currentDistance = 0;
+            document.getElementById('runDuration').textContent = '0:00';
+            document.getElementById('runDistance').textContent = '0.0 km';
+            document.getElementById('runPace').textContent = '0:00 /km';
+            document.getElementById('territorySize').textContent = '0.0 km²';
+        }
+
+        // Simulate real-time updates from other players
+        setInterval(() => {
+            if (Math.random() < 0.1) { // 10% chance every 5 seconds
+                const mapArea = document.getElementById('mapArea');
+                const newTerritory = document.createElement('div');
+                newTerritory.className = 'territory other-territory';
+                
+                const left = Math.random() * 70;
+                const top = Math.random() * 70;
+                const width = Math.random() * 80 + 60;
+                const height = Math.random() * 60 + 40;
+                
+                newTerritory.style.left = left + '%';
+                newTerritory.style.top = top + '%';
+                newTerritory.style.width = width + 'px';
+                newTerritory.style.height = height + 'px';
+                
+                mapArea.appendChild(newTerritory);
+                
+                // Animate in
+                newTerritory.style.opacity = '0';
+                newTerritory.style.transform = 'scale(0.5)';
+                setTimeout(() => {
+                    newTerritory.style.transition = 'all 0.5s ease';
+                    newTerritory.style.opacity = '0.7';
+                    newTerritory.style.transform = 'scale(1)';
+                }, 100);
+            }
+        }, 5000);
+    </script>
+</body>
+</html>
