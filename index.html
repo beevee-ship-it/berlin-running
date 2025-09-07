@@ -384,25 +384,42 @@
         </div>
 
         <div class="map-container">
-            <div class="mock-map" id="mapArea">
-                <!-- Existing territories -->
-                <div class="territory player-territory" style="top: 20%; left: 15%; width: 150px; height: 120px;"></div>
-                <div class="territory player-territory" style="top: 60%; left: 10%; width: 100px; height: 100px;"></div>
-                <div class="territory player-territory" style="top: 70%; left: 70%; width: 120px; height: 80px;"></div>
-                
-                <div class="territory other-territory" style="top: 10%; left: 60%; width: 180px; height: 140px;"></div>
-                <div class="territory other-territory" style="top: 40%; left: 75%; width: 160px; height: 100px;"></div>
-                <div class="territory other-territory" style="top: 30%; left: 40%; width: 140px; height: 90px;"></div>
-                
-                <div class="territory neutral-territory" style="top: 80%; left: 30%; width: 200px; height: 80px;"></div>
-                <div class="territory neutral-territory" style="top: 45%; left: 5%; width: 80px; height: 120px;"></div>
-            </div>
-            
-            <div class="location-info">
-                <div><span class="gps-icon">📍</span> Berlin, Germany</div>
-                <div style="margin-top: 5px; color: #666;">GPS: Active</div>
-            </div>
-        </div>
+           <div id="mapArea" style="width: 100%; height: 100%;"></div>
+
+<!-- Add this script at the bottom of your HTML file -->
+<script>
+  function initMap() {
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const userLocation = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude
+        };
+
+        const map = new google.maps.Map(document.getElementById("mapArea"), {
+          center: userLocation,
+          zoom: 16,
+          mapTypeId: "roadmap"
+        });
+
+        new google.maps.Marker({
+          position: userLocation,
+          map: map,
+          title: "You are here"
+        });
+      },
+      (error) => {
+        console.error("Error getting location:", error);
+        alert("Location access is required to show the map.");
+      }
+    );
+  }
+</script>
+
+<!-- Load Google Maps API (replace YOUR_API_KEY with your actual key) -->
+<script async defer
+  src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&callback=initMap">
+</script>
     </div>
 
     <!-- Privacy Settings Modal -->
